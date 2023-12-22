@@ -1,4 +1,4 @@
-unit Unit1;
+ï»¿unit Unit1;
 
 interface
 
@@ -19,12 +19,13 @@ type
     procedure Button1Click(Sender: TObject);
     procedure DoEditKey(Sender: TObject; var Key: Char);
   private
-    { Déclarations privées }
+    { Dï¿½clarations privï¿½es }
     procedure WMDropFiles(var msg : TMessage); message WM_DROPFILES;
 
   public
-    { Déclarations publiques }
+    { Dï¿½clarations publiques }
   end;
+
 
 type
   a_char = record
@@ -36,6 +37,9 @@ type
        bitmap : array of byte;
 
   end;
+const
+  margin = 10;
+  topmargin = 5;
 var
   Form1: TForm1;
   // my global vars
@@ -60,8 +64,7 @@ begin
 end;
 
 procedure PrintChars(img : TImage; gheight,gwidth : integer);
-const
-  lmarg = 20;
+
 var
   i, index, tempo : integer;
   Bitmap : TBitmap;
@@ -69,18 +72,21 @@ var
   x, y, z : Integer;
   CouleurRGB: TRGBQuad;
   b : byte;
-  leftmargin, topmargin : integer;
+  leftmargin, tmargin : integer;
 
 begin
-  leftmargin := lmarg;
-  topmargin := 5;
-  index := Min(numglyph,256);
+  leftmargin := margin;
+  tmargin := topmargin;
+  index := numglyph;
 
   Bitmap := TBitmap.Create;
   Bitmap.PixelFormat := pf32bit;
   // XXXXXXXXXXXXXXXXXXXx
-  tempo := (img.Width - lmarg*2) div ((bitmapw * 8)+1) ;  // nb glyph /line
-  tempo := numglyph div tempo + 1;  // nb of line needed
+  tempo := (img.Width - margin*2) div ((bitmapw * 8)+1) ;  // nb glyph /line
+  tempo := numglyph div tempo + 2;  // nb of line needed
+                                    // +2 : due to the truncation effected by
+                                    // both integer division
+                                    // (bitmap may be not enought high otherwise)
   img.Height := topmargin + tempo * (bitmaph+1);
   Bitmap.SetSize(img.Width, img.Height);
 
@@ -102,7 +108,7 @@ begin
             begin
               if GetBitValue(b,7-z) then    // most significant bits first
               begin
-                ScanLinePtr := Bitmap.ScanLine[y + topmargin];
+                ScanLinePtr := Bitmap.ScanLine[tmargin + y];
                 Inc(ScanLinePtr,leftmargin);
                 Inc(ScanLinePtr, x * 8 + z);
                 ScanLinePtr^ := CouleurRGB;
@@ -111,10 +117,10 @@ begin
           inc(index);
         end;
     inc(leftmargin,gwidth*8+1);             // +1 for 1 pixel margin between glyphs
-    if leftmargin > bitmap.Width-lmarg*2 then
+    if leftmargin > bitmap.Width - margin * 2 then   // next line of glyphs
     begin
-      inc(topmargin,gheight+1);             // +1 for 1 pixel between lines of glyphs
-      leftmargin := lmarg;
+      inc(tmargin,gheight+1);             // +1 for 1 pixel between lines of glyphs
+      leftmargin := margin;                 // reset leftmargin
     end;
   end;
   img.Picture.Bitmap.Assign(Bitmap);
