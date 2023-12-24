@@ -1,4 +1,4 @@
-unit Unit1;
+﻿unit Unit1;
 
 interface
 
@@ -18,6 +18,9 @@ type
     procedure DoCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure DoEditKey(Sender: TObject; var Key: Char);
+    procedure DoMouseWhell(Sender: TObject; Shift: TShiftState;
+      WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+    procedure DoImageClick(Sender: TObject);
   private
     { D�clarations priv�es }
     procedure WMDropFiles(var msg : TMessage); message WM_DROPFILES;
@@ -74,7 +77,6 @@ var
   leftmargin, tmargin : integer;
 
 begin
-mladkzlkd
   leftmargin := margin;
   tmargin := topmargin;
   index := numglyph;
@@ -348,4 +350,36 @@ begin
     Key := #0;
   end;
 end;
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+procedure TForm1.DoImageClick(Sender: TObject);
+var
+  pt : tPoint;
+  x,y : integer;
+
+begin
+  pt :=  TImage(Sender).ScreenToClient(Mouse.CursorPos);
+  put(IntToStr(pt.X)+ ' ' + IntToStr(pt.Y));
+
+  x := (pt.X - margin) div (bitmapw * 9);
+  y := (pt.Y - topmargin) div (bitmaph);
+  put(IntToStr(x));
+  put(IntToStr(y));
+
+
+
+end;
+
+procedure TForm1.DoMouseWhell(Sender: TObject; Shift: TShiftState;
+  WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+var
+  aPos: SmallInt;
+begin
+  aPos:= ScrollBox1.VertScrollBar.Position - WheelDelta ;
+  aPos:= Max(aPos, 0);
+  aPos:= Min(aPos, ScrollBox1.VertScrollBar.Range);
+  ScrollBox1.VertScrollBar.Position := aPos;
+  Handled := True;
+end;
+
 end.

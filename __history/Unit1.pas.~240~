@@ -18,6 +18,9 @@ type
     procedure DoCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure DoEditKey(Sender: TObject; var Key: Char);
+    procedure DoMouseWhell(Sender: TObject; Shift: TShiftState;
+      WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+    procedure DoImageClick(Sender: TObject);
   private
     { D�clarations priv�es }
     procedure WMDropFiles(var msg : TMessage); message WM_DROPFILES;
@@ -25,7 +28,6 @@ type
   public
     { D�clarations publiques }
   end;
-
 
 type
   a_char = record
@@ -48,9 +50,18 @@ var
   bitmapw : integer;
   bitmaph : integer;
   bitmapsize : integer;
+  glyphsperline : integer;
+  glyphlines : integer;
 
 implementation
 {$R *.dfm}
+
+procedure DoInvert(x,y : integer);
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+begin
+
+
+end;
 
 function ColorToRGBQuad(color:TColor):TRGBQuad;
 var
@@ -66,7 +77,7 @@ end;
 procedure PrintChars(img : TImage; gheight,gwidth : integer);
 
 var
-  i, index, tempo : integer;
+  i, index : integer;
   Bitmap : TBitmap;
   ScanLinePtr : PRGBQuad;
   x, y, z : Integer;
@@ -81,13 +92,13 @@ begin
 
   Bitmap := TBitmap.Create;
   Bitmap.PixelFormat := pf32bit;
-  // XXXXXXXXXXXXXXXXXXXx
-  tempo := (img.Width - margin*2) div ((bitmapw * 8)+1) ;  // nb glyph /line
-  tempo := numglyph div tempo + 2;  // nb of line needed
+  //
+  glyphsperline := (img.Width - margin*2) div ((bitmapw * 8)+1) ;  // nb glyph /line
+  glyphlines := numglyph div glyphsperline + 2;  // nb of line needed
                                     // +2 : due to the truncation effected by
                                     // both integer division
                                     // (bitmap may be not enought high otherwise)
-  img.Height := topmargin + tempo * (bitmaph+1);
+  img.Height := topmargin + glyphlines * (bitmaph+1);
   Bitmap.SetSize(img.Width, img.Height);
 
   CouleurRGB := ColorToRGBQuad(clBlack);
@@ -348,4 +359,38 @@ begin
     Key := #0;
   end;
 end;
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+procedure TForm1.DoImageClick(Sender: TObject);
+var
+  pt : tPoint;
+  x,y : integer;
+  curglyph : integer;
+
+begin
+  pt :=  TImage(Sender).ScreenToClient(Mouse.CursorPos);
+  put(IntToStr(pt.X)+ ' ' + IntToStr(pt.Y));
+
+  x := (pt.X - margin) div ((bitmapw * 8)+1);
+  y := (pt.Y - topmargin) div (bitmaph);
+  put(IntToStr(x));
+  put(IntToStr(y));
+
+  curglyph := y * glyphsperline + x;
+  put(IntToStr(curglyph) + ' : ' + a[curglyph].name);
+  DoInvert(x,y);
+end;
+
+procedure TForm1.DoMouseWhell(Sender: TObject; Shift: TShiftState;
+  WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+var
+  aPos: SmallInt;
+begin
+  aPos:= ScrollBox1.VertScrollBar.Position - WheelDelta ;
+  aPos:= Max(aPos, 0);
+  aPos:= Min(aPos, ScrollBox1.VertScrollBar.Range);
+  ScrollBox1.VertScrollBar.Position := aPos;
+  Handled := True;
+end;
+
 end.

@@ -91,6 +91,7 @@ object Form1: TForm1
     Margins.Right = 5
     Margins.Bottom = 5
     TabOrder = 4
+    OnMouseWheel = DoMouseWhell
     object Image1: TImage
       Left = 5
       Top = 5
@@ -100,6 +101,7 @@ object Form1: TForm1
       Margins.Top = 5
       Margins.Right = 5
       Margins.Bottom = 5
+      OnClick = DoImageClick
     end
   end
 end

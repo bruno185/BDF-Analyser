@@ -1,12 +1,27 @@
 unit MyUtils;
+
 interface
 uses Sysutils;
+
 function TextfileSize(const name: string): LongInt;
 function countglyph(fname : string) : integer;
 procedure GetDataInfo(fname : string; var minl,maxl,minline,maxline : integer);
-Function IntToSepStr(n : integer):String;
+function AddThousandSeparator(S: string; Chr: char): string;
+function GetSubString(s,start : string) : string;
+function GetBitValue(const AByte: Byte; const BitIndex: Integer): Boolean;
 
 implementation
+
+function GetSubString(s,start : string) : string;
+begin
+  GetSubString := copy(s,length(start)+1,length(s)-length(start));
+end;
+
+function GetBitValue(const AByte: Byte; const BitIndex: Integer): Boolean;
+begin
+  Result := (AByte and (1 shl BitIndex)) <> 0;
+end;
+
 
 function TextfileSize(const name: string): LongInt;
 var
@@ -85,10 +100,19 @@ begin
   CloseFile(f);
 end;
 
-Function IntToSepStr(n : integer):String;
-begin
-  result := Format('%.0n',[n/1])
+function AddThousandSeparator(S: string; Chr: char): string;
+var I: integer;
+  begin
+  Result := S;
+  I := Length(S)-2;
+  while I > 1 do
+  begin
+    Insert(Chr, Result, I);
+    I := I - 3;
+    end;
 end;
+
+
 
 
 end.

@@ -14,7 +14,7 @@ implementation
 
 function GetSubString(s,start : string) : string;
 begin
-  GetSubString := copy(s,length(start)+1,length(s)-length(start));
+  GetSubString := trim(copy(s,length(start)+1,length(s)-length(start)));
 end;
 
 function GetBitValue(const AByte: Byte; const BitIndex: Integer): Boolean;
