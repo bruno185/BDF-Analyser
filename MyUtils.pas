@@ -1,7 +1,10 @@
 unit MyUtils;
 
 interface
-uses Sysutils;
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs,ShellApi, Vcl.StdCtrls, System.RegularExpressions,
+  Vcl.ComCtrls, Vcl.ExtCtrls, Math;
 
 function TextfileSize(const name: string): LongInt;
 function countglyph(fname : string) : integer;
@@ -9,8 +12,33 @@ procedure GetDataInfo(fname : string; var minl,maxl,minline,maxline : integer);
 function AddThousandSeparator(S: string; Chr: char): string;
 function GetSubString(s,start : string) : string;
 function GetBitValue(const AByte: Byte; const BitIndex: Integer): Boolean;
+function ColorToRGBQuad(color:TColor):TRGBQuad;
+procedure ImageClear(img : TImage);
+
 
 implementation
+
+procedure ImageClear(img : TImage);
+var
+  r : Trect;
+begin
+  // clear image
+  img.Canvas.Brush.Color := clWhite;
+  r := Rect(0,0,img.Width,img.Height);
+  img.Canvas.FillRect(r);
+end;
+
+
+function ColorToRGBQuad(color:TColor):TRGBQuad;
+var
+  k:COLORREF;
+begin
+  k := ColorToRGB(color);
+  result.rgbBlue  := GetBValue(k);
+  result.rgbGreen := GetGValue(k);
+  result.rgbRed   := GetRValue(k);
+  result.rgbReserved := 0;
+end;
 
 function GetSubString(s,start : string) : string;
 begin
@@ -30,7 +58,7 @@ begin
   if FindFirst(name, faAnyfile, SRec) = 0 then
   begin
     Result := SRec.Size;
-    Sysutils.FindClose(SRec);
+    FindClose(SRec);
   end
   else
     Result := 0;

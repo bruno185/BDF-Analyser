@@ -16,12 +16,14 @@ type
     ScrollBox1: TScrollBox;
     Image1: TImage;
     Memo3: TMemo;
+    CharImage: TImage;
     procedure DoCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure DoEditKey(Sender: TObject; var Key: Char);
     procedure DoMouseWhell(Sender: TObject; Shift: TShiftState;
       WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
-    procedure DoImageClick(Sender: TObject);
+    procedure DoImageDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
   private
     { D�clarations priv�es }
     procedure WMDropFiles(var msg : TMessage); message WM_DROPFILES;
@@ -60,18 +62,55 @@ var
 implementation
 {$R *.dfm}
 
+// Display zoomed glyph in CharImage (TImage) with black squares
+procedure BigGlyph(i : integer);
+var
+  side : integer;
+  k, l, z : integer;
+  b : byte;
+  r : TRect;
+  hmargin, vmargin : integer;
+begin
+  if i >= numglyph then exit;
+
+  // clear image
+  ImageClear(Form1.CharImage);
+  // get side of a square
+  side := Min (Form1.CharImage.Height div bitmaph, Form1.CharImage.Width div bitmapw);
+  hmargin := (Form1.CharImage.Width - (side * bitmapw*8)) div 2;
+  vmargin := (Form1.CharImage.Height - (side * bitmaph)) div 2;
+
+  // loop on each bit of the glyph bitmap
+  for k := 0 to  bitmaph -1 do
+  for l := 0 to  bitmapw -1 do
+  begin
+    b := a[i].bitmap[k * bitmapw + l];
+    for z := 0 to 7 do
+    begin
+      if GetBitValue(b,7-z) then
+      Form1.CharImage.Canvas.Brush.Color := clRed    // black square if bit  = 1
+      else
+      Form1.CharImage.Canvas.Brush.Color := clWhite;   // white square if bit  = 0
+
+      r.Top := k * side + vmargin;
+      r.Left := (l * 8 + z) * side + hmargin;
+      r.Bottom := r.Top + side;
+      r.Right := r.Left + side;
+
+      Form1.CharImage.Canvas.FillRect(r);  // draw square
+    end;
+  end;
+end;
 
 
-
+// hiight clicked glyph
 procedure DoInvert2(i : integer);
 var
   k, l : integer;
   r : TRect;
   c : TColor;
-
 begin
-
-  // reset previous glyph
+  // reset previous glyph (red pixels ==> white)
   if prevglyph <> - 1 then
   begin
     r := a[prevglyph].r;
@@ -84,6 +123,7 @@ begin
     end;
   end;
 
+  // set to red clicked glyph
   if i < numglyph then
   begin
     r := a[i].r;
@@ -99,16 +139,6 @@ begin
     prevglyph := -1;
 end;
 
-function ColorToRGBQuad(color:TColor):TRGBQuad;
-var
-  k:COLORREF;
-begin
-  k := ColorToRGB(color);
-  result.rgbBlue  := GetBValue(k);
-  result.rgbGreen := GetGValue(k);
-  result.rgbRed   := GetRValue(k);
-  result.rgbReserved := 0;
-end;
 
 // Display chars on Image1
 procedure PrintChars(img : TImage; gheight,gwidth : integer);
@@ -148,11 +178,14 @@ begin
   begin
     index := 0;
     a[i].r.Top := tmargin;
-    a[i].r.Left := leftmargin;
+    a[i].r.Left := leftmargin - 1;
     a[i].r.Bottom := tmargin + gheight + 1;
     // rect is 1 pixel higher (to the bottom), to take account 1 pixel margin between lines
     a[i].r.Right := leftmargin + (gwidth) * 8;  // instead of  (gwidth) * 8 +1
     // rect is 1 pixel wider (to the right), to take account 1 pixel margin between chars
+
+
+
     for y := 0 to gheight-1 do    // line loop
       for x := 0 to gwidth-1 do   // col loop
         begin
@@ -175,6 +208,9 @@ begin
       inc(tmargin,gheight+1);             // +1 for 1 pixel between lines of glyphs
       leftmargin := margin;                 // reset leftmargin
     end;
+    // frame each glyph
+    bitmap.Canvas.Brush.Color := clMoneyGreen;
+    bitmap.Canvas.FrameRect(a[i].r);
   end;
   img.Picture.Bitmap.Assign(Bitmap);
 
@@ -287,7 +323,7 @@ var
   regex : TRegEx;
   match : TMatch;
   matches : TMatchCollection;
-  achar : array of a_char;
+
 begin
   form1.Memo1.Clear;
   AssignFile(filin,fname);
@@ -305,7 +341,6 @@ begin
   put('File size : ' + AddThousandSeparator(IntToStr(TextfileSize(fname)),' ')+ ' bytes');
   put('');
 
-  put('* * * * * * * * * * STARTFONT * * * * * * * * * * ');
   put('BDF version : ' + copy(s,length('STARTFONT')+2,length(s)-length('STARTFONT')+2) );
 
   repeat
@@ -353,7 +388,6 @@ begin
   ReadChars(fname);
   // display glyphs
   PrintChars(Form1.Image1,maxline,maxl div 2);
-  put('* * * * * * * * * * ENDFONT * * * * * * * * * * ');
 end;
 
 // Drag and Drop
@@ -365,6 +399,13 @@ begin
     hand:=msg.wParam;
     nbFich:= DragQueryFile(hand, 4294967295, buf, 254);
     DragQueryFile(hand, 0, buf, 254);
+    Memo1.Lines.Clear;
+    Memo2.Lines.Clear;
+    Memo3.Lines.Clear;
+      // clear image
+    ImageClear(CharImage);
+    curglyph := -1;
+    prevglyph := -1;
     Memo2.Lines.LoadFromFile(buf);
     DoFile(buf);
     DragFinish(hand);
@@ -398,6 +439,8 @@ begin
   Memo1.Lines.Clear;
   Memo2.Lines.Clear;
   Memo3.Lines.Clear;
+    // clear image
+  ImageClear(CharImage);
   curglyph := -1;
   prevglyph := -1;
 end;
@@ -411,12 +454,11 @@ begin
   end;
 end;
 
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXX
-// Click in Image
-procedure TForm1.DoImageClick(Sender: TObject);
+procedure TForm1.DoImageDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
 var
   pt : tPoint;
-  x, y, i : integer;
+  i : integer;
   found : Boolean;
 
 begin
@@ -453,9 +495,12 @@ begin
   begin
     memo3.Clear;
     put3('NO CHAR');
+    ImageClear(CharImage);
   end;
 
   DoInvert2(curglyph);
+  BigGlyph(curglyph);
+
 end;
 
 procedure TForm1.DoMouseWhell(Sender: TObject; Shift: TShiftState;

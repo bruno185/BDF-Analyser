@@ -14,11 +14,21 @@ object Form1: TForm1
   OnCreate = DoCreate
   PixelsPerInch = 144
   TextHeight = 25
+  object CharImage: TImage
+    Left = 420
+    Top = 431
+    Width = 224
+    Height = 158
+    Margins.Left = 5
+    Margins.Top = 5
+    Margins.Right = 5
+    Margins.Bottom = 5
+  end
   object Memo1: TRichEdit
     Left = 10
     Top = 10
     Width = 634
-    Height = 459
+    Height = 411
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -101,14 +111,14 @@ object Form1: TForm1
       Margins.Top = 5
       Margins.Right = 5
       Margins.Bottom = 5
-      OnClick = DoImageClick
+      OnMouseDown = DoImageDown
     end
   end
   object Memo3: TMemo
     Left = 10
-    Top = 479
-    Width = 634
-    Height = 110
+    Top = 431
+    Width = 400
+    Height = 158
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
