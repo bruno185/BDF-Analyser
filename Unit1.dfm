@@ -18,7 +18,7 @@ object Form1: TForm1
     Left = 10
     Top = 10
     Width = 634
-    Height = 579
+    Height = 459
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -103,5 +103,18 @@ object Form1: TForm1
       Margins.Bottom = 5
       OnClick = DoImageClick
     end
+  end
+  object Memo3: TMemo
+    Left = 10
+    Top = 479
+    Width = 634
+    Height = 110
+    Margins.Left = 5
+    Margins.Top = 5
+    Margins.Right = 5
+    Margins.Bottom = 5
+    Lines.Strings = (
+      'Memo3')
+    TabOrder = 5
   end
 end

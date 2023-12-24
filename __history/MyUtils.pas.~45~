@@ -1,13 +1,27 @@
 unit MyUtils;
+
 interface
 uses Sysutils;
+
 function TextfileSize(const name: string): LongInt;
 function countglyph(fname : string) : integer;
 procedure GetDataInfo(fname : string; var minl,maxl,minline,maxline : integer);
 function AddThousandSeparator(S: string; Chr: char): string;
-procedure ReadChars(const name: string);
+function GetSubString(s,start : string) : string;
+function GetBitValue(const AByte: Byte; const BitIndex: Integer): Boolean;
 
 implementation
+
+function GetSubString(s,start : string) : string;
+begin
+  GetSubString := trim(copy(s,length(start)+1,length(s)-length(start)));
+end;
+
+function GetBitValue(const AByte: Byte; const BitIndex: Integer): Boolean;
+begin
+  Result := (AByte and (1 shl BitIndex)) <> 0;
+end;
+
 
 function TextfileSize(const name: string): LongInt;
 var
@@ -99,9 +113,20 @@ var I: integer;
 end;
 
 
-procedure ReadChars(const name: string);
+// NOT USED in Unit1.pas
+{procedure CanvasInvertRect(C: TCanvas; const R: TRect);
+var
+  N: TColor;
 begin
-end;
-
+  N:= C.Brush.Color;
+  C.Pen.Color:= clWhite;
+  C.Brush.Color:= clWhite;
+  C.Pen.Width:= 1;
+  C.Pen.Mode:= pmXor;
+  C.Rectangle(R);
+  C.Pen.Mode:= pmCopy;
+  C.Rectangle(Rect(0, 0, 0, 0)); //update pen.mode
+  C.Brush.Color:= N;
+end;  }
 
 end.

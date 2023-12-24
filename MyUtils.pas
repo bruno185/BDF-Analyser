@@ -113,6 +113,41 @@ var I: integer;
 end;
 
 
+// NOT USED in Unit1.pas
+{procedure CanvasInvertRect(C: TCanvas; const R: TRect);
+var
+  N: TColor;
+begin
+  N:= C.Brush.Color;
+  C.Pen.Color:= clWhite;
+  C.Brush.Color:= clWhite;
+  C.Pen.Width:= 1;
+  C.Pen.Mode:= pmXor;
+  C.Rectangle(R);
+  C.Pen.Mode:= pmCopy;
+  C.Rectangle(Rect(0, 0, 0, 0)); //update pen.mode
+  C.Brush.Color:= N;
+end;
 
+procedure DoInvert(i : integer);
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+// http://delphi-kb.blogspot.com/2008/03/invert-colors-in-timage.html
+begin
+  with form1.Image1.Picture.Bitmap do
+  begin
+    // reset previous glyph
+    if prevglyph <> - 1 then CanvasInvertRect(Canvas,a[prevglyph].r);
+
+    // invert current glyph
+    if i < numglyph then
+    begin
+      CanvasInvertRect(Canvas,a[curglyph].r);
+      prevglyph := curglyph;
+    end
+    else
+    prevglyph := -1;
+  end;
+end;
+ }
 
 end.

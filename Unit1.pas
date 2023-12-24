@@ -15,6 +15,7 @@ type
     FindEdit: TEdit;
     ScrollBox1: TScrollBox;
     Image1: TImage;
+    Memo3: TMemo;
     procedure DoCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure DoEditKey(Sender: TObject; var Key: Char);
@@ -36,6 +37,7 @@ type
        swidth : string;
        dwidth : string;
        brx : string;
+       r : Trect;
        bitmap : array of byte;
 
   end;
@@ -52,14 +54,49 @@ var
   bitmapsize : integer;
   glyphsperline : integer;
   glyphlines : integer;
+  curglyph : integer;
+  prevglyph : integer;
 
 implementation
 {$R *.dfm}
 
-procedure DoInvert(x,y : integer);
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXX
-// http://delphi-kb.blogspot.com/2008/03/invert-colors-in-timage.html
+
+
+
+procedure DoInvert2(i : integer);
+var
+  k, l : integer;
+  r : TRect;
+  c : TColor;
+
 begin
+
+  // reset previous glyph
+  if prevglyph <> - 1 then
+  begin
+    r := a[prevglyph].r;
+    for k := r.Top to r.Bottom do
+    for l := r.Left to r.Right do
+    begin
+       c := form1.Image1.Picture.Bitmap.Canvas.Pixels[l,k];
+       if c = clRed then
+        form1.Image1.Picture.Bitmap.Canvas.Pixels[l,k] := clWhite;
+    end;
+  end;
+
+  if i < numglyph then
+  begin
+    r := a[i].r;
+    for k := r.Top to r.Bottom do
+    for l := r.Left to r.Right do
+    begin
+     c := form1.Image1.Picture.Bitmap.Canvas.Pixels[l,k];
+     if c = clWhite then form1.Image1.Picture.Bitmap.Canvas.Pixels[l,k] := clRed;
+     prevglyph := curglyph;
+    end;
+  end
+    else
+    prevglyph := -1;
 end;
 
 function ColorToRGBQuad(color:TColor):TRGBQuad;
@@ -73,8 +110,8 @@ begin
   result.rgbReserved := 0;
 end;
 
+// Display chars on Image1
 procedure PrintChars(img : TImage; gheight,gwidth : integer);
-
 var
   i, index : integer;
   Bitmap : TBitmap;
@@ -85,9 +122,9 @@ var
   leftmargin, tmargin : integer;
 
 begin
-  leftmargin := margin;
+  leftmargin := margin;   // init. margins with const
   tmargin := topmargin;
-  index := numglyph;
+  //index := numglyph;
 
   Bitmap := TBitmap.Create;
   Bitmap.PixelFormat := pf32bit;
@@ -110,6 +147,12 @@ begin
   for i := 0 to numglyph-1 do            // chars loop
   begin
     index := 0;
+    a[i].r.Top := tmargin;
+    a[i].r.Left := leftmargin;
+    a[i].r.Bottom := tmargin + gheight + 1;
+    // rect is 1 pixel higher (to the bottom), to take account 1 pixel margin between lines
+    a[i].r.Right := leftmargin + (gwidth) * 8;  // instead of  (gwidth) * 8 +1
+    // rect is 1 pixel wider (to the right), to take account 1 pixel margin between chars
     for y := 0 to gheight-1 do    // line loop
       for x := 0 to gwidth-1 do   // col loop
         begin
@@ -230,6 +273,11 @@ begin
   Form1.Memo1.Lines.Add(out);
 end;
 
+procedure put3(out : string);
+begin
+  Form1.Memo3.Lines.Add(out);
+end;
+
 // read BDF file, display info
 procedure Dofile(fname : string);
 var
@@ -300,8 +348,8 @@ begin
 
   // put glyphs data in an array
   bitmapsize :=  (maxl div 2) * maxline;    // set max size to reserve for each char
-  bitmapw := maxl div 2;                    // set max width of each char
-  bitmaph := maxline;                       // set max height of each char
+  bitmapw := maxl div 2;                    // set max width of each char (in bytes)
+  bitmaph := maxline;                       // set max height of each char (in pixels)
   ReadChars(fname);
   // display glyphs
   PrintChars(Form1.Image1,maxline,maxl div 2);
@@ -311,7 +359,7 @@ end;
 // Drag and Drop
 procedure TForm1.WMDropFiles(var msg : TMessage);
 var hand: THandle;
-nbFich, i : integer;
+nbFich : integer;
 buf:array[0..254] of Char;
 begin
     hand:=msg.wParam;
@@ -349,6 +397,9 @@ begin
   DragAcceptFiles(Form1.Handle , true);
   Memo1.Lines.Clear;
   Memo2.Lines.Clear;
+  Memo3.Lines.Clear;
+  curglyph := -1;
+  prevglyph := -1;
 end;
 
 // return key in FindEdit
@@ -361,24 +412,50 @@ begin
 end;
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+// Click in Image
 procedure TForm1.DoImageClick(Sender: TObject);
 var
   pt : tPoint;
-  x,y : integer;
-  curglyph : integer;
+  x, y, i : integer;
+  found : Boolean;
 
 begin
   pt :=  TImage(Sender).ScreenToClient(Mouse.CursorPos);
-  put(IntToStr(pt.X)+ ' ' + IntToStr(pt.Y));
+  //put(IntToStr(pt.X)+ ' ' + IntToStr(pt.Y));
 
-  x := (pt.X - margin) div ((bitmapw * 8)+1);
-  y := (pt.Y - topmargin) div (bitmaph);
-  put(IntToStr(x));
-  put(IntToStr(y));
+  //x := (pt.X - margin) div ((bitmapw * 8)+1);
+  //y := (pt.Y - topmargin) div (bitmaph);
+  //put(IntToStr(x));
+  //put(IntToStr(y));
 
-  curglyph := y * glyphsperline + x;
-  put(IntToStr(curglyph) + ' : ' + a[curglyph].name);
-  DoInvert(x,y);
+  i := 0;
+  found := false;
+  repeat
+    if PtInRect(a[i].r,pt) then found := true
+    else inc(i)
+  until (found) or (i = numglyph);
+
+  if found then
+  begin
+    curglyph := i;
+  end
+  else
+  curglyph :=  numglyph ;
+  //curglyph := y * glyphsperline + x;
+  if curglyph < numglyph then
+  begin
+    memo3.Clear;
+    put3('Glyph# : '+ IntToStr(curglyph));
+    put3('Name : '+ a[curglyph].name);
+    put3('Encoding : ' + IntToStr(a[curglyph].encoding));
+  end
+  else
+  begin
+    memo3.Clear;
+    put3('NO CHAR');
+  end;
+
+  DoInvert2(curglyph);
 end;
 
 procedure TForm1.DoMouseWhell(Sender: TObject; Shift: TShiftState;
