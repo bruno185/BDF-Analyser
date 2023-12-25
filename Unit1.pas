@@ -44,6 +44,8 @@ type
 
   end;
 const
+
+  Version = '1.3';
   margin = 10;
   topmargin = 5;
 var
@@ -443,6 +445,7 @@ begin
   ImageClear(CharImage);
   curglyph := -1;
   prevglyph := -1;
+  Form1.Caption := Form1.Caption + ' v.' + Version;
 end;
 
 // return key in FindEdit
