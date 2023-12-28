@@ -1,9 +1,10 @@
 object Form1: TForm1
-  Left = 343
-  Top = 164
+  Left = 325
+  Top = 145
+  BorderStyle = bsSingle
   Caption = 'BDF Font Analyser'
-  ClientHeight = 827
-  ClientWidth = 1301
+  ClientHeight = 825
+  ClientWidth = 1303
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,19 +16,30 @@ object Form1: TForm1
   PixelsPerInch = 144
   TextHeight = 25
   object CharImage: TImage
-    Left = 420
+    Left = 456
     Top = 431
-    Width = 224
-    Height = 158
+    Width = 188
+    Height = 159
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
     Margins.Bottom = 5
   end
+  object Label1: TLabel
+    Left = 335
+    Top = 477
+    Width = 105
+    Height = 25
+    Margins.Left = 5
+    Margins.Top = 5
+    Margins.Right = 5
+    Margins.Bottom = 5
+    Caption = 'Glyph range :'
+  end
   object Memo1: TRichEdit
-    Left = 10
-    Top = 10
-    Width = 634
+    Left = 11
+    Top = 11
+    Width = 633
     Height = 411
     Margins.Left = 5
     Margins.Top = 5
@@ -45,10 +57,10 @@ object Form1: TForm1
     TabOrder = 0
   end
   object Memo2: TRichEdit
-    Left = 654
-    Top = 47
-    Width = 637
-    Height = 542
+    Left = 655
+    Top = 48
+    Width = 638
+    Height = 543
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -68,7 +80,7 @@ object Form1: TForm1
   end
   object Button1: TButton
     Left = 654
-    Top = 10
+    Top = 11
     Width = 113
     Height = 27
     Margins.Left = 5
@@ -81,8 +93,8 @@ object Form1: TForm1
   end
   object FindEdit: TEdit
     Left = 777
-    Top = 10
-    Width = 511
+    Top = 11
+    Width = 515
     Height = 33
     Margins.Left = 5
     Margins.Top = 5
@@ -92,10 +104,10 @@ object Form1: TForm1
     OnKeyPress = DoEditKey
   end
   object ScrollBox1: TScrollBox
-    Left = 10
+    Left = 11
     Top = 599
     Width = 1281
-    Height = 218
+    Height = 219
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -115,10 +127,10 @@ object Form1: TForm1
     end
   end
   object Memo3: TMemo
-    Left = 10
+    Left = 11
     Top = 431
-    Width = 400
-    Height = 158
+    Width = 315
+    Height = 159
     Margins.Left = 5
     Margins.Top = 5
     Margins.Right = 5
@@ -126,5 +138,48 @@ object Form1: TForm1
     Lines.Strings = (
       'Memo3')
     TabOrder = 5
+  end
+  object ExportBtn: TButton
+    Left = 335
+    Top = 431
+    Width = 112
+    Height = 37
+    Margins.Left = 5
+    Margins.Top = 5
+    Margins.Right = 5
+    Margins.Bottom = 5
+    Caption = 'Export'
+    Enabled = False
+    TabOrder = 6
+    OnClick = ExportBtnClick
+  end
+  object Range1: TEdit
+    Left = 335
+    Top = 512
+    Width = 112
+    Height = 33
+    Margins.Left = 5
+    Margins.Top = 5
+    Margins.Right = 5
+    Margins.Bottom = 5
+    TabOrder = 7
+    Text = '0'
+  end
+  object Range2: TEdit
+    Left = 335
+    Top = 555
+    Width = 112
+    Height = 33
+    Margins.Left = 5
+    Margins.Top = 5
+    Margins.Right = 5
+    Margins.Bottom = 5
+    TabOrder = 8
+    Text = '255'
+  end
+  object SaveDialog1: TSaveDialog
+    Title = 'Export glyph data for Appple II :'
+    Left = 727
+    Top = 431
   end
 end

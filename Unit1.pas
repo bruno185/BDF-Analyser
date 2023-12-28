@@ -17,6 +17,11 @@ type
     Image1: TImage;
     Memo3: TMemo;
     CharImage: TImage;
+    ExportBtn: TButton;
+    Range1: TEdit;
+    Range2: TEdit;
+    Label1: TLabel;
+    SaveDialog1: TSaveDialog;
     procedure DoCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure DoEditKey(Sender: TObject; var Key: Char);
@@ -24,6 +29,7 @@ type
       WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
     procedure DoImageDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
+    procedure ExportBtnClick(Sender: TObject);
   private
     { D�clarations priv�es }
     procedure WMDropFiles(var msg : TMessage); message WM_DROPFILES;
@@ -33,7 +39,7 @@ type
   end;
 
 type
-  a_char = record
+  a_char = record                     // array holding data of a BDF file
        name : string;
        encoding : integer;
        swidth : string;
@@ -41,28 +47,48 @@ type
        brx : string;
        r : Trect;
        bitmap : array of byte;
-
   end;
-const
 
-  Version = '1.3';
+const
+  Version = '1.4';
+  InvalidMsg = 'Invalid file.';
   margin = 10;
   topmargin = 5;
+
 var
   Form1: TForm1;
   // my global vars
-  a : array of a_char;
-  numglyph : integer;
-  bitmapw : integer;
-  bitmaph : integer;
-  bitmapsize : integer;
-  glyphsperline : integer;
-  glyphlines : integer;
-  curglyph : integer;
-  prevglyph : integer;
+  a : array of a_char;                // data of a BDF file loaded in this array
+  numglyph : integer;                 // number of glyphs in BDP file
+  bitmapw : integer;                  // width (in byte) of glyphs (*8 to get maximum width in pixel)
+  bitmaph : integer;                  // height of glyphs in pixel
+  bitmapsize : integer;               // size in byte of glyphs (= width * height)
+  usedpix : integer;                  // real maximum width in pixels of glyphs
+  glyphsperline : integer;            // number of glyphs diplayed per line in Timage
+  glyphlines : integer;               // number of lines of glyphs displayed in Timage
+  curglyph : integer;                 // index of clicked glyph
+  prevglyph : integer;                // index of previously clicked glyph
 
 implementation
 {$R *.dfm}
+
+function OraBitmap : byte;
+var
+  i, j : integer;
+  b : byte;
+begin
+  b := 0;
+  for i := 0 to numglyph - 1 do
+  begin
+    j := bitmapw-1;
+    repeat
+      b := b or a[i].bitmap[j];
+      j := j + bitmapw;
+    until j >= bitmapsize;
+  end;
+
+  result := b;
+end;
 
 // Display zoomed glyph in CharImage (TImage) with black squares
 procedure BigGlyph(i : integer);
@@ -104,8 +130,7 @@ begin
   end;
 end;
 
-
-// hiight clicked glyph
+// hilight clicked glyph
 procedure DoInvert2(i : integer);
 var
   k, l : integer;
@@ -185,8 +210,6 @@ begin
     // rect is 1 pixel higher (to the bottom), to take account 1 pixel margin between lines
     a[i].r.Right := leftmargin + (gwidth) * 8;  // instead of  (gwidth) * 8 +1
     // rect is 1 pixel wider (to the right), to take account 1 pixel margin between chars
-
-
 
     for y := 0 to gheight-1 do    // line loop
       for x := 0 to gwidth-1 do   // col loop
@@ -334,17 +357,13 @@ begin
   readln(filin,s);
   if not(s.Contains('STARTFONT')) then
   begin
-    put('Invalid file.');
+    put(InvalidMsg);
     CloseFile(filin);
     exit;
   end;
-
   put('File name : ' + fname);
   put('File size : ' + AddThousandSeparator(IntToStr(TextfileSize(fname)),' ')+ ' bytes');
-  put('');
-
   put('BDF version : ' + copy(s,length('STARTFONT')+2,length(s)-length('STARTFONT')+2) );
-
   repeat
     readln(filin,s);
     if regex.IsMatch(s,'^SIZE') then
@@ -369,25 +388,37 @@ begin
   put('');
 
   // * * * * * * * * *
-  put('Glyph bitmap information :');
   numglyph := countglyph(fname);
   put('Number of glyphs : ' + AddThousandSeparator(IntToStr(numglyph),' '));
 
   // read all file and set vars
   GetDataInfo(fname, minl,maxl,minline,maxline);
 
+  bitmapsize :=  (maxl div 2) * maxline;    // set max size to reserve for each char
+                                            // (2 chars for a byte in hex representation)
+  bitmapw := maxl div 2;                    // set max width of each char (in bytes)
+                                            // (2 chars for a byte in hex representation)
+  bitmaph := maxline;                       // set max height of each char (in pixels)
+
   if minl div 2 > 1  then bytestr := ' bytes' else bytestr :=  ' byte';
   put('Min row size : ' + IntToStr(minl div 2) + bytestr);
-  if maxl div 2 > 1  then bytestr := ' bytes' else bytestr :=  ' byte';
-  put('Max row size : ' + IntToStr(maxl div 2) + bytestr);
-  put('Min height : ' + IntToStr(minline)+' lines');
-  put('Max height : ' + IntToStr(maxline)+' lines');
+  if bitmapw > 1  then bytestr := ' bytes' else bytestr :=  ' byte';
+  put('Max row size : ' + IntToStr(bitmapw) + bytestr);
+  put('Min height : ' + IntToStr(bitmaph)+' lines');
+  put('Max height : ' + IntToStr(bitmaph)+' lines');
 
-  // put glyphs data in an array
-  bitmapsize :=  (maxl div 2) * maxline;    // set max size to reserve for each char
-  bitmapw := maxl div 2;                    // set max width of each char (in bytes)
-  bitmaph := maxline;                       // set max height of each char (in pixels)
+  // populate array of chars
   ReadChars(fname);
+  usedpix := (bitmapw-1) * 8 + Count1Bits(OraBitmap);
+  put('Horizontal pixels used per row : ' + IntToStr(usedpix)
+  + ' (or check sum = '+IntToStr(OraBitmap)+')');
+
+  s := ' bytes per line are required on the Apple II screen, at least.';
+  if usedpix mod 7 = 0 then
+  put('==> ' + IntToStr(usedpix div 7) + s)
+  else
+  put('==> ' + IntToStr(usedpix div 7 + 1) + s);
+
   // display glyphs
   PrintChars(Form1.Image1,maxline,maxl div 2);
 end;
@@ -408,8 +439,15 @@ begin
     ImageClear(CharImage);
     curglyph := -1;
     prevglyph := -1;
-    Memo2.Lines.LoadFromFile(buf);
+    ExportBtn.Enabled := true;
     DoFile(buf);
+    if Memo1.Lines[0] <> InvalidMsg then
+    begin
+      Memo2.Lines.LoadFromFile(buf);
+      Range1.Text := '0';
+      Range2.Text := '255';
+      if numglyph < 256 then  Range2.Text := IntToStr(numglyph-1);
+    end;
     DragFinish(hand);
 end;
 
@@ -435,14 +473,87 @@ begin
 end;
 
 // init vars at program start
+procedure TForm1.ExportBtnClick(Sender: TObject);
+var
+  f : file of byte;
+  range : SmallInt;
+  b : byte;
+  i, j, k, l, aa, zz, delta : integer;
+  bitval : Boolean;
+  outbyte : array of byte;
+  bitindexin, byteindexin, bitindexout, byteindexout : byte;
+
+begin
+  range := TestRange(Range1.Text, Range2.Text, numglyph);
+  if  range > 0  then
+  if SaveDialog1.Execute then
+  begin
+    AssignFile(f,SaveDialog1.FileName);
+    rewrite(f);
+
+    b := lo(range);                     // range of glyph  (2 bytes)
+    write(f,b);
+    b := hi(range);
+    write(f,b);
+
+//     b := lo(bitmapw); write(f,b);
+    if usedpix mod 7 = 0  then                // width (in bytes) of glyph
+    SetLength(outbyte,usedpix div 7)
+    else  SetLength(outbyte,(usedpix div 7)+1);
+    b := lo(length(outbyte));
+    write(f,b);
+
+    b := lo(bitmaph);                         // height of glyph
+    write(f,b);
+
+    aa := StrToInt(Range1.Text);
+    zz := StrToInt(Range2.Text);
+
+    for i := aa to zz do                             // glyph loop
+    for j := 0 to bitmaph - 1 do                     // line loop
+    begin
+      for k := 0 to Length(outbyte) - 1 do outbyte[k] := 0;
+      bitindexin := 0;
+      byteindexin := 0;
+      bitindexout := 0;
+      byteindexout := 0;
+      for l := 0 to usedpix - 1 do
+      begin
+        b := a[i].bitmap[j * bitmapw + byteindexin];
+
+        if GetBitValue(b,7-bitindexin) then
+        outbyte[byteindexout] := SetBitValue(outbyte[byteindexout],bitindexout);
+
+        inc(bitindexin);
+        if bitindexin = 8 then
+        begin
+          inc(byteindexin);
+          bitindexin := 0
+        end;
+
+        inc(bitindexout);
+        if bitindexout = 7 then
+        begin
+          inc(byteindexout);
+          bitindexout := 0
+        end;
+      end;
+
+      for k := 0 to Length(outbyte) - 1 do write(f,outbyte[k]);
+
+    end;
+    closefile(f);
+  end;
+end;
+
 procedure TForm1.DoCreate(Sender: TObject);
 begin
   DragAcceptFiles(Form1.Handle , true);
   Memo1.Lines.Clear;
+  Memo1.Lines.Add('Drag a BDF font file over this application...');
   Memo2.Lines.Clear;
   Memo3.Lines.Clear;
-    // clear image
-  ImageClear(CharImage);
+  ImageClear(CharImage);  // clear image
   curglyph := -1;
   prevglyph := -1;
   Form1.Caption := Form1.Caption + ' v.' + Version;
@@ -457,22 +568,16 @@ begin
   end;
 end;
 
+
+// when mouse donw on image
 procedure TForm1.DoImageDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
   pt : tPoint;
   i : integer;
   found : Boolean;
-
 begin
   pt :=  TImage(Sender).ScreenToClient(Mouse.CursorPos);
-  //put(IntToStr(pt.X)+ ' ' + IntToStr(pt.Y));
-
-  //x := (pt.X - margin) div ((bitmapw * 8)+1);
-  //y := (pt.Y - topmargin) div (bitmaph);
-  //put(IntToStr(x));
-  //put(IntToStr(y));
-
   i := 0;
   found := false;
   repeat
@@ -486,13 +591,17 @@ begin
   end
   else
   curglyph :=  numglyph ;
-  //curglyph := y * glyphsperline + x;
   if curglyph < numglyph then
   begin
     memo3.Clear;
-    put3('Glyph# : '+ IntToStr(curglyph));
+    put3('Glyph# : '+ IntToStr(curglyph) + ' ($' + IntToHex(curglyph,2)+')');
     put3('Name : '+ a[curglyph].name);
     put3('Encoding : ' + IntToStr(a[curglyph].encoding));
+    // sync with glyph text file
+    FindEdit.Text := a[curglyph].name;    // set search question
+    Memo2.SelStart := 0;                  // reset glyph text to beginning
+    Button1.Click;                        // perform search
+    Memo2.perform(em_linescroll, 0, 18) ; // scroll up
   end
   else
   begin
@@ -503,6 +612,13 @@ begin
 
   DoInvert2(curglyph);
   BigGlyph(curglyph);
+
+  // if shift pressed : set range to this glyph
+  if ssShift in Shift then
+  begin
+    Range1.Text := IntToStr(curglyph);
+    Range2.Text := IntToStr(curglyph);
+  end;
 
 end;
 
