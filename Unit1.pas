@@ -472,45 +472,41 @@ begin
   end;
 end;
 
-// init vars at program start
-procedure TForm1.ExportBtnClick(Sender: TObject);
+
+// Export data in Apple II binary screen format
+procedure SaveBinary(fname : string ; r1,r2 : smallint);
 var
   f : file of byte;
-  range : SmallInt;
   b : byte;
-  i, j, k, l, aa, zz, delta : integer;
+  i, j, k, l, aa, zz, delta, range : integer;
   bitval : Boolean;
   outbyte : array of byte;
   bitindexin, byteindexin, bitindexout, byteindexout : byte;
-
 begin
-  range := TestRange(Range1.Text, Range2.Text, numglyph);
-  if  range > 0  then
-  if SaveDialog1.Execute then
-  begin
-    AssignFile(f,SaveDialog1.FileName);
+    if pos('.bin', LowerCase(fname)) <> length(fname) - length('.bin') + 1 then
+    fname := fname + '.bin';
+
+    AssignFile(f,fname);
     rewrite(f);
+    range := r2-r1+1;
 
     b := lo(range);                     // range of glyph  (2 bytes)
     write(f,b);
     b := hi(range);
     write(f,b);
 
-//     b := lo(bitmapw); write(f,b);
     if usedpix mod 7 = 0  then                // width (in bytes) of glyph
     SetLength(outbyte,usedpix div 7)
     else  SetLength(outbyte,(usedpix div 7)+1);
     b := lo(length(outbyte));
     write(f,b);
-
     b := lo(bitmaph);                         // height of glyph
     write(f,b);
 
-    aa := StrToInt(Range1.Text);
-    zz := StrToInt(Range2.Text);
-
-    for i := aa to zz do                             // glyph loop
-    for j := 0 to bitmaph - 1 do                     // line loop
+    aa := r1;
+    zz := r2;
+    for i := aa to zz do                      // glyph loop
+    for j := 0 to bitmaph - 1 do              // line loop
     begin
       for k := 0 to Length(outbyte) - 1 do outbyte[k] := 0;
       bitindexin := 0;
@@ -520,30 +516,126 @@ begin
       for l := 0 to usedpix - 1 do
       begin
         b := a[i].bitmap[j * bitmapw + byteindexin];
-
+        // invert bits order to match Apple II screen
         if GetBitValue(b,7-bitindexin) then
         outbyte[byteindexout] := SetBitValue(outbyte[byteindexout],bitindexout);
 
         inc(bitindexin);
-        if bitindexin = 8 then
+        if bitindexin = 8 then          // end of input byte ?
         begin
-          inc(byteindexin);
-          bitindexin := 0
+          inc(byteindexin);             // yes : next byte
+          bitindexin := 0               // and reset bit counter to 0
         end;
 
-        inc(bitindexout);
-        if bitindexout = 7 then
+        inc(bitindexout);              // same with ouput byte
+        if bitindexout = 7 then        // only 7 bit per screen byte on Apple II
         begin
           inc(byteindexout);
           bitindexout := 0
         end;
       end;
-
+      // write data to file
       for k := 0 to Length(outbyte) - 1 do write(f,outbyte[k]);
-
     end;
     closefile(f);
+end;
+
+procedure SaveSource(fname : string ; r1,r2 : smallint);
+var
+  f : TextFile;
+  b : byte;
+  i, j, k, l, aa, zz, delta, range : integer;
+  bitval : Boolean;
+  outbyte : array of byte;
+  bitindexin, byteindexin, bitindexout, byteindexout : byte;
+begin
+    if (fname[length(fname)] <> 's') or (fname[length(fname)-1] <> '.') then
+    fname := fname + '.s';
+
+    AssignFile(f,fname);
+    rewrite(f);
+    range := r2-r1+1;
+
+    write(f,'numglyph hex ');    // range of glyph  (2 bytes)
+    b := lo(range);
+    write(f, ByteToHex(b));
+    b := hi(range);
+    writeln(f, ByteToHex(b));
+
+    write(f,'gwidth hex ');
+    if usedpix mod 7 = 0  then                // width (in bytes) of glyph
+    SetLength(outbyte,usedpix div 7)
+    else  SetLength(outbyte,(usedpix div 7)+1);
+    b := lo(length(outbyte));
+    writeln(f, ByteToHex(b));
+
+    write(f,'gheight hex ');
+    b := lo(bitmaph);                         // height of glyph
+    writeln(f, ByteToHex(b));
+
+    writeln(f,'font');
+
+    aa := r1;
+    zz := r2;
+    for i := aa to zz do                      // glyph loop
+    begin
+      writeln(f,'glyph'+IntToStr(a[i].encoding)); // print label for curent glyph
+      for j := 0 to bitmaph - 1 do              // line loop
+      begin
+        for k := 0 to Length(outbyte) - 1 do outbyte[k] := 0;
+        bitindexin := 0;
+        byteindexin := 0;
+        bitindexout := 0;
+        byteindexout := 0;
+        for l := 0 to usedpix - 1 do
+        begin
+          b := a[i].bitmap[j * bitmapw + byteindexin];
+          // invert bits order to match Apple II screen
+          if GetBitValue(b,7-bitindexin) then
+          outbyte[byteindexout] := SetBitValue(outbyte[byteindexout],bitindexout);
+
+          inc(bitindexin);
+          if bitindexin = 8 then          // end of input byte ?
+          begin
+            inc(byteindexin);             // yes : next byte
+            bitindexin := 0               // and reset bit counter to 0
+          end;
+
+          inc(bitindexout);              // same with ouput byte
+          if bitindexout = 7 then        // only 7 bit per screen byte on Apple II
+          begin
+            inc(byteindexout);
+            bitindexout := 0
+          end;
+        end;
+        // write data to file
+        write(f,' hex ');
+        for k := 0 to Length(outbyte) - 1 do write(f,ByteToHex(outbyte[k]));
+        writeln(f);
+      end;
+    end;
+    closefile(f);
+end;
+
+// init vars at program start
+procedure TForm1.ExportBtnClick(Sender: TObject);
+var
+  range : SmallInt;
+
+begin
+  range := TestRange(Range1.Text, Range2.Text, numglyph);
+  if  range > 0  then
+  if SaveDialog1.Execute then
+  if SaveDialog1.FilterIndex = 1 then
+  begin
+    SaveBinary(SaveDialog1.FileName, StrToInt(Range1.Text), StrToInt(Range2.Text));
+  end  // if FilterIndex = 1
+  else
+  if SaveDialog1.FilterIndex = 2 then
+  begin
+    SaveSource(SaveDialog1.FileName, StrToInt(Range1.Text), StrToInt(Range2.Text));
   end;
+
 end;
 
 procedure TForm1.DoCreate(Sender: TObject);

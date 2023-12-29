@@ -178,6 +178,7 @@ object Form1: TForm1
     Text = '255'
   end
   object SaveDialog1: TSaveDialog
+    Filter = 'binary|*.bin|source|*.s'
     Title = 'Export glyph data for Appple II :'
     Left = 727
     Top = 431

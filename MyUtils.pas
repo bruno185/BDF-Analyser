@@ -18,8 +18,20 @@ function ColorToRGBQuad(color:TColor):TRGBQuad;
 procedure ImageClear(img : TImage);
 Function TestRange(r1, r2 : string; numglyph : integer) : SmallInt;
 function Count1Bits(b : byte) : byte;
+function ByteToHex(InByte:byte):shortstring;
 
 implementation
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * *
+function ByteToHex(InByte:byte):shortstring;
+const Digits:array[0..15] of char='0123456789ABCDEF';
+begin
+ result:=digits[InByte shr 4]+digits[InByte and $0F];
+end;
+
+
+
 // * * * * * * * * * * * * * * * * * * * * * * * *
 Function TestRange(r1, r2 : string; numglyph : integer) : SmallInt;
 var
